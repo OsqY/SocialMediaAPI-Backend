@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>SocialMediaAPI</name>
+    </assembly>
+    <members>
+        <member name="T:SocialMediaAPI.Migrations.NewRelationships">
+            <inheritdoc />
+        </member>
+        <member name="M:SocialMediaAPI.Migrations.NewRelationships.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:SocialMediaAPI.Migrations.NewRelationships.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:SocialMediaAPI.Migrations.NewRelationships.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+    </members>
+</doc>
