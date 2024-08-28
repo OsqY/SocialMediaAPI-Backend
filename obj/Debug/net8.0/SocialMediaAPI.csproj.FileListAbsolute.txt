@@ -124,3 +124,7 @@
 /home/oscar/Desktop/C#/SocialMediaAPI/bin/Debug/net8.0/System.IdentityModel.Tokens.Jwt.dll
 /home/oscar/Desktop/C#/SocialMediaAPI/bin/Debug/net8.0/SocialMediaAPI.xml
 /home/oscar/Desktop/C#/SocialMediaAPI/obj/Debug/net8.0/SocialMediaAPI.xml
+/home/oscar/Desktop/C#/SocialMediaAPI/obj/Debug/net8.0/SocialMediaAPI.sourcelink.json
+/home/oscar/Desktop/C#/SocialMediaAPI/bin/Debug/net8.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll
+/home/oscar/Desktop/C#/SocialMediaAPI/bin/Debug/net8.0/Microsoft.IdentityModel.Protocols.dll
+/home/oscar/Desktop/C#/SocialMediaAPI/bin/Debug/net8.0/Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
