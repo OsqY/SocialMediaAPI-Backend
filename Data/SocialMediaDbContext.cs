@@ -11,6 +11,13 @@ namespace SocialMediaAPI.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder
+                .Entity<Post>()
+                .HasMany(p => p.LikedByUsers)
+                .WithMany(u => u.LikedPosts)
+                .UsingEntity(j => j.ToTable("Post_Likes"));
+
+            modelBuilder.Entity<ApiUser>().HasMany(u => u.Posts).WithOne(p => p.User);
             base.OnModelCreating(modelBuilder);
         }
 

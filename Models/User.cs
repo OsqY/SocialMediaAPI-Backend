@@ -5,6 +5,8 @@ namespace SocialMediaAPI.Models
     public class ApiUser : IdentityUser
     {
         public ICollection<Post>? Posts { get; set; }
+        public ICollection<Post>? LikedPosts { get; set; }
         public ICollection<ApiUser>? Followers { get; set; }
+        public ICollection<ApiUser>? Following { get; set; }
     }
 }

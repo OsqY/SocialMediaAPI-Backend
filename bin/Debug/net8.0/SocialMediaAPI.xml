@@ -16,5 +16,17 @@
         <member name="M:SocialMediaAPI.Migrations.NewRelationships.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
             <inheritdoc />
         </member>
+        <member name="T:SocialMediaAPI.Migrations.ChangedRelationships">
+            <inheritdoc />
+        </member>
+        <member name="M:SocialMediaAPI.Migrations.ChangedRelationships.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:SocialMediaAPI.Migrations.ChangedRelationships.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:SocialMediaAPI.Migrations.ChangedRelationships.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
     </members>
 </doc>

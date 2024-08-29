@@ -5,6 +5,7 @@ using Microsoft.Extensions.Caching.Memory;
 using SocialMediaAPI.Data;
 using SocialMediaAPI.DTO;
 using SocialMediaAPI.Models;
+using SocialMediaAPI.Utils;
 
 namespace SocialMediaAPI.Controllers;
 
@@ -15,11 +16,17 @@ public class PostController : ControllerBase
 {
     private readonly SocialMediaDbContext _context;
     private readonly IMemoryCache _memoryCache;
+    private readonly UserUtils _userUtils;
 
-    public PostController(SocialMediaDbContext context, IMemoryCache memoryCache)
+    public PostController(
+        SocialMediaDbContext context,
+        IMemoryCache memoryCache,
+        UserUtils userUtils
+    )
     {
         _context = context;
         _memoryCache = memoryCache;
+        _userUtils = userUtils;
     }
 
     [HttpGet("{username}")]
@@ -57,31 +64,12 @@ public class PostController : ControllerBase
     [HttpPost]
     public async Task<ActionResult> Post(PostDTO postDTO)
     {
-        var username = User.FindFirst(
-            "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"
-        )?.Value;
-        Console.WriteLine("Username" + username);
-        Console.WriteLine(User.Claims);
+        var result = await _userUtils.GetUser(_context, User, this);
 
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
+        if (result.Result != null)
+            return result.Result;
 
-        if (user == null)
-        {
-            return NotFound(
-                new RestDTO<Post?>()
-                {
-                    Data = null,
-                    Links = new List<LinkDTO>()
-                    {
-                        new LinkDTO(
-                            Url.Action("GetUsers", "Users", null, Request.Scheme)!,
-                            "users",
-                            "GET"
-                        )
-                    }
-                }
-            );
-        }
+        var user = result.Value;
 
         Post? post = new Post
         {
@@ -104,5 +92,102 @@ public class PostController : ControllerBase
                 }
             }
         );
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<ActionResult> Delete(int id)
+    {
+        var result = await _userUtils.GetUser(_context, User, this);
+
+        if (result.Result != null)
+            return result.Result;
+
+        var user = result.Value;
+
+        var post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == id && p.UserId == user.Id);
+
+        if (post == null)
+            return NotFound(
+                new RestDTO<string?>()
+                {
+                    Data = null,
+                    Links = new List<LinkDTO>()
+                    {
+                        new LinkDTO(
+                            Url.Action("GetPostFromId", "Posts", new { id }, Request.Scheme)!,
+                            "post",
+                            "GET"
+                        )
+                    }
+                }
+            );
+
+        _context.Remove(post);
+        await _context.SaveChangesAsync();
+
+        return Ok(
+            new RestDTO<string?>()
+            {
+                Data = "Post deleted!",
+                Links = new List<LinkDTO>()
+                {
+                    new LinkDTO(
+                        Url.Action("DeletePost", "Posts", new { id }, Request.Scheme)!,
+                        "post",
+                        "DELETE"
+                    )
+                }
+            }
+        );
+    }
+
+    [HttpPost("{id}")]
+    public async Task<ActionResult> LikePost(int id)
+    {
+        var result = await _userUtils.GetUser(_context, User, this);
+
+        if (result.Result != null)
+            return result.Result;
+
+        var user = result.Value;
+
+        var post = await _context
+            .Posts.Include(p => p.LikedByUsers)
+            .FirstOrDefaultAsync(p => p.Id == id);
+
+        if (post == null)
+            return NotFound(new RestDTO<string?> { Data = "Post not found" });
+
+        if (post.LikedByUsers.Any(u => u.Id == user.Id))
+            return BadRequest(new RestDTO<string?> { Data = "Post already liked by user." });
+
+        post.LikedByUsers.Add(user);
+
+        return Ok(new RestDTO<string?> { Data = "Post liked." });
+    }
+
+    [HttpPost("{id}")]
+    public async Task<ActionResult> UnlikePost(int id)
+    {
+        var result = await _userUtils.GetUser(_context, User, this);
+
+        if (result.Result != null)
+            return result.Result;
+
+        var user = result.Value;
+
+        var post = await _context
+            .Posts.Include(p => p.LikedByUsers)
+            .FirstOrDefaultAsync(p => p.Id == id);
+
+        if (post == null)
+            return NotFound(new RestDTO<string?> { Data = "Post not found." });
+
+        if (post.LikedByUsers.Any(u => u.Id == user.Id))
+            return BadRequest(new RestDTO<string?> { Data = "Post doesn't have user's like." });
+
+        post.LikedByUsers.Remove(user);
+
+        return Ok(new RestDTO<string?> { Data = "Post unliked." });
     }
 }

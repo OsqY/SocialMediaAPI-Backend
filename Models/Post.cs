@@ -16,7 +16,6 @@ namespace SocialMediaAPI.Models
         public ApiUser? User { get; set; }
 
         public string Description { get; set; } = string.Empty;
-        public int Likes { get; set; }
 
         [Required]
         public DateTime CreatedDate { get; set; }
@@ -25,5 +24,7 @@ namespace SocialMediaAPI.Models
         public DateTime LastModifiedDate { get; set; }
 
         public ICollection<Comment>? Comments { get; set; }
+
+        public ICollection<ApiUser>? LikedByUsers { get; set; }
     }
 }
