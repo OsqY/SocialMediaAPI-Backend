@@ -128,3 +128,4 @@
 /home/oscar/Desktop/C#/SocialMediaAPI/bin/Debug/net8.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll
 /home/oscar/Desktop/C#/SocialMediaAPI/bin/Debug/net8.0/Microsoft.IdentityModel.Protocols.dll
 /home/oscar/Desktop/C#/SocialMediaAPI/bin/Debug/net8.0/Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+/home/oscar/Desktop/C#/SocialMediaAPI/bin/Debug/net8.0/System.Net.WebSockets.WebSocketProtocol.dll

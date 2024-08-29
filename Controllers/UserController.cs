@@ -1,11 +1,14 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using SocialMediaAPI.Data;
 using SocialMediaAPI.DTO;
 using SocialMediaAPI.Models;
+using SocialMediaAPI.Services;
+using SocialMediaAPI.Utils;
 
 namespace SocialMediaAPI.Controllers;
 
@@ -16,16 +19,25 @@ public class UserController : ControllerBase
     private readonly SocialMediaDbContext _context;
     private readonly UserManager<ApiUser> _userManager;
     private readonly IConfiguration _configuration;
+    private readonly SignInManager<ApiUser> _signInManager;
+    private readonly TokenBlacklistService _blacklistService;
+    private readonly UserUtils _userUtils;
 
     public UserController(
         SocialMediaDbContext context,
         UserManager<ApiUser> userManager,
-        IConfiguration configuration
+        IConfiguration configuration,
+        SignInManager<ApiUser> signInManager,
+        TokenBlacklistService blacklistService,
+        UserUtils userUtils
     )
     {
         _context = context;
         _userManager = userManager;
         _configuration = configuration;
+        _signInManager = signInManager;
+        _blacklistService = blacklistService;
+        _userUtils = userUtils;
     }
 
     [HttpPost]
@@ -72,6 +84,7 @@ public class UserController : ControllerBase
             exceptionDetails.Detail = e.Message;
             exceptionDetails.Status = StatusCodes.Status500InternalServerError;
             exceptionDetails.Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1";
+            Console.WriteLine(exceptionDetails.Detail);
             return StatusCode(StatusCodes.Status500InternalServerError, exceptionDetails);
         }
     }
@@ -113,7 +126,7 @@ public class UserController : ControllerBase
                         issuer: _configuration["JWT:Issuer"],
                         audience: _configuration["JWT:Audience"],
                         claims: claims,
-                        expires: DateTime.Now.AddSeconds(300),
+                        expires: DateTime.Now.AddMinutes(15),
                         signingCredentials: signingCredentials
                     );
 
@@ -139,6 +152,69 @@ public class UserController : ControllerBase
 
             exceptionDetails.Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1";
             return StatusCode(StatusCodes.Status401Unauthorized, exceptionDetails);
+        }
+    }
+
+    [HttpPost]
+    [Authorize]
+    [ResponseCache(CacheProfileName = "NoCache")]
+    [ProducesResponseType(typeof(string), 200)]
+    [ProducesResponseType(typeof(ProblemDetails), 400)]
+    [ProducesResponseType(typeof(ProblemDetails), 401)]
+    [ProducesResponseType(typeof(ProblemDetails), 500)]
+    public async Task<ActionResult> Logout()
+    {
+        try
+        {
+            var result = await _userUtils.GetUser(_context, User, this);
+
+            if (result.Result != null)
+                return result.Result;
+
+            await _signInManager.SignOutAsync();
+
+            var authHeader = HttpContext.Request.Headers["Authorization"].FirstOrDefault();
+            if (string.IsNullOrEmpty(authHeader))
+            {
+                return BadRequest(
+                    new ProblemDetails
+                    {
+                        Status = StatusCodes.Status400BadRequest,
+                        Title = "Missing Authorization Header",
+                        Detail = "The Authorization header is missing or empty"
+                    }
+                );
+            }
+
+            var token = authHeader.Replace("Bearer ", "");
+            if (string.IsNullOrEmpty(token))
+            {
+                return BadRequest(
+                    new ProblemDetails
+                    {
+                        Status = StatusCodes.Status400BadRequest,
+                        Title = "Invalid Token",
+                        Detail = "The provided token is empty or invalid"
+                    }
+                );
+            }
+
+            await _blacklistService.BlackListTokenAsync(token, TimeSpan.FromMinutes(15));
+
+            return Ok("Logged out successfully.");
+        }
+        catch (Exception e)
+        {
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new ProblemDetails
+                {
+                    Status = StatusCodes.Status500InternalServerError,
+                    Title = "Internal Server Error",
+                    Detail = "An error occurred during the logout process",
+                    Instance = HttpContext.Request.Path
+                }
+            );
         }
     }
 }

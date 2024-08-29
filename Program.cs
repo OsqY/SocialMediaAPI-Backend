@@ -6,8 +6,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SocialMediaAPI.Data;
+using SocialMediaAPI.Middleware;
 using SocialMediaAPI.Models;
+using SocialMediaAPI.Services;
 using SocialMediaAPI.Swagger;
+using SocialMediaAPI.Utils;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -120,8 +123,25 @@ builder
                 System.Text.Encoding.UTF8.GetBytes(builder.Configuration["JWT:SigningKey"]!)
             )
         };
+        opts.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hub"))
+                    context.Token = accessToken;
+                return Task.CompletedTask;
+            }
+        };
     });
 
+builder.Services.AddSignalR();
+
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSingleton<TokenBlacklistService>();
+builder.Services.AddSingleton<UserUtils>();
 builder.Services.AddResponseCaching(opts =>
 {
     opts.MaximumBodySize = 32 * 1024 * 1024;
@@ -137,9 +157,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseCors("AnyOrigin");
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
+app.UseMiddleware<TokenBlacklistMiddleware>();
 app.UseAuthorization();
 app.Use(
     (context, next) =>
