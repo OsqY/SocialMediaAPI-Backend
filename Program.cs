@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SocialMediaAPI.Data;
+using SocialMediaAPI.Hubs;
 using SocialMediaAPI.Middleware;
 using SocialMediaAPI.Models;
 using SocialMediaAPI.Services;
@@ -177,5 +178,7 @@ app.Use(
 );
 
 app.MapControllers();
+app.MapHub<PostHub>("/postHub");
+app.MapHub<ChatHub>("/chatHub");
 
 app.Run();

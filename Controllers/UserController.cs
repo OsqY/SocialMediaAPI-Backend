@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SocialMediaAPI.Data;
 using SocialMediaAPI.DTO;
@@ -210,8 +211,76 @@ public class UserController : ControllerBase
                 new ProblemDetails
                 {
                     Status = StatusCodes.Status500InternalServerError,
-                    Title = "Internal Server Error",
+                    Title = "Internal Server Error " + e.Message,
                     Detail = "An error occurred during the logout process",
+                    Instance = HttpContext.Request.Path
+                }
+            );
+        }
+    }
+
+    [HttpGet("{username}")]
+    [ProducesResponseType(typeof(string), 200)]
+    [ProducesResponseType(typeof(ProblemDetails), 404)]
+    [ProducesResponseType(typeof(ProblemDetails), 500)]
+    public async Task<ActionResult> GetUserByUsername(string username)
+    {
+        try
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
+
+            if (user == null)
+                return NotFound(
+                    new ProblemDetails
+                    {
+                        Status = StatusCodes.Status400BadRequest,
+                        Title = "Invalid username",
+                        Detail = "That user doesn't exists."
+                    }
+                );
+
+            return Ok(user);
+        }
+        catch (Exception e)
+        {
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new ProblemDetails
+                {
+                    Status = StatusCodes.Status500InternalServerError,
+                    Title = "Internal server error: " + e.Message,
+                    Detail = "An error occurred during the user retrieving process.",
+                    Instance = HttpContext.Request.Path
+                }
+            );
+        }
+    }
+
+    [HttpGet]
+    [Authorize]
+    [ProducesResponseType(typeof(string), 200)]
+    [ProducesResponseType(typeof(ProblemDetails), 401)]
+    [ProducesResponseType(typeof(ProblemDetails), 500)]
+    public async Task<ActionResult> GetUserProfile()
+    {
+        try
+        {
+            var result = await _userUtils.GetUser(_context, User, this);
+
+            if (result.Result != null)
+                return result.Result;
+
+            return Ok(result);
+        }
+        catch (Exception e)
+        {
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new ProblemDetails
+                {
+                    Status = StatusCodes.Status500InternalServerError,
+                    Title = "Internal server error: " + e.Message,
+                    Detail = "An error occurred during the userprofile retrieving process.",
                     Instance = HttpContext.Request.Path
                 }
             );

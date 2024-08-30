@@ -28,5 +28,17 @@
         <member name="M:SocialMediaAPI.Migrations.ChangedRelationships.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
             <inheritdoc />
         </member>
+        <member name="T:SocialMediaAPI.Migrations.Addedmessages">
+            <inheritdoc />
+        </member>
+        <member name="M:SocialMediaAPI.Migrations.Addedmessages.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:SocialMediaAPI.Migrations.Addedmessages.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:SocialMediaAPI.Migrations.Addedmessages.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
     </members>
 </doc>

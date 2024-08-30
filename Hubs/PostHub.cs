@@ -19,34 +19,42 @@ public class PostHub : Hub
 
     public async Task AddPost(PostDTO postDTO)
     {
-        var username = GetUsername();
-
-        if (string.IsNullOrEmpty(username))
+        try
         {
-            await Clients.Caller.SendAsync("Error", "User not authenticated.");
-            return;
+            var username = GetUsername();
+
+            if (string.IsNullOrEmpty(username))
+            {
+                await Clients.Caller.SendAsync("Error", "User not authenticated.");
+                return;
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
+
+            if (user == null)
+            {
+                await Clients.Caller.SendAsync("Error", "User not found.");
+                return;
+            }
+
+            Post? post = new Post
+            {
+                Description = postDTO.Description,
+                CreatedDate = DateTime.Now,
+                LastModifiedDate = DateTime.Now,
+                UserId = user.Id
+            };
+
+            await _context.Posts.AddAsync(post);
+            await _context.SaveChangesAsync();
+
+            await Clients.All.SendAsync("Post added.", post);
         }
-
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
-
-        if (user == null)
+        catch (Exception e)
         {
-            await Clients.Caller.SendAsync("Error", "User not found.");
-            return;
+            Console.Error.WriteLine($"Error in AddPost: {e.Message}");
+            await Clients.Caller.SendAsync("Error", "An error occurred while adding your post.");
         }
-
-        Post? post = new Post
-        {
-            Description = postDTO.Description,
-            CreatedDate = DateTime.Now,
-            LastModifiedDate = DateTime.Now,
-            UserId = user.Id
-        };
-
-        await _context.Posts.AddAsync(post);
-        await _context.SaveChangesAsync();
-
-        await Clients.All.SendAsync("Post added.", post);
     }
 
     private string? GetUsername()

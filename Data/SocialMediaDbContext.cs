@@ -17,11 +17,32 @@ namespace SocialMediaAPI.Data
                 .WithMany(u => u.LikedPosts)
                 .UsingEntity(j => j.ToTable("Post_Likes"));
 
-            modelBuilder.Entity<ApiUser>().HasMany(u => u.Posts).WithOne(p => p.User);
+            modelBuilder
+                .Entity<ApiUser>()
+                .HasMany(u => u.Posts)
+                .WithOne(p => p.User)
+                .HasForeignKey(p => p.UserId)
+                .IsRequired();
+
+            modelBuilder
+                .Entity<ApiUser>()
+                .HasMany(u => u.ReceivedMessages)
+                .WithOne(m => m.Receiver)
+                .HasForeignKey(m => m.ReceiverId)
+                .IsRequired();
+
+            modelBuilder
+                .Entity<ApiUser>()
+                .HasMany(u => u.SentMessages)
+                .WithOne(m => m.Sender)
+                .HasForeignKey(m => m.SenderId)
+                .IsRequired();
+
             base.OnModelCreating(modelBuilder);
         }
 
         public DbSet<Comment> Comments => Set<Comment>();
         public DbSet<Post> Posts => Set<Post>();
+        public DbSet<ChatMessage> Messages => Set<ChatMessage>();
     }
 }
