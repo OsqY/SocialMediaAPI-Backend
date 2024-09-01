@@ -83,9 +83,14 @@ public class PostController : ControllerBase
         await _context.SaveChangesAsync();
 
         return Ok(
-            new RestDTO<Post?>()
+            new RestDTO<PostDTO?>()
             {
-                Data = post,
+                Data = new PostDTO
+                {
+                    Description = post.Description,
+                    CreatedDate = post.CreatedDate,
+                    UserId = post.UserId
+                },
                 Links = new List<LinkDTO>()
                 {
                     new LinkDTO(Url.Action(null, "Posts", postDTO, Request.Scheme)!, "self", "POST")

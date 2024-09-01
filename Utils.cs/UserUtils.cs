@@ -22,7 +22,8 @@ public class UserUtils
         if (string.IsNullOrEmpty(username))
             return controller.Unauthorized(new { Message = "User is not authenticated!" });
 
-        var user = await context.Users.FirstOrDefaultAsync(u => u.UserName == username);
+        ApiUser user;
+        user = await context.Users.FirstOrDefaultAsync(u => u.UserName == username);
 
         if (user == null)
         {
@@ -47,5 +48,37 @@ public class UserUtils
             );
         }
         return user;
+    }
+
+    public async Task<ActionResult<UserProfileDTO?>> GetUserProfileInfo(
+        SocialMediaDbContext context,
+        string username,
+        ControllerBase controller
+    )
+    {
+        if (string.IsNullOrEmpty(username))
+            return controller.NotFound(new { Message = "User not found" });
+
+        var userProfile = await context
+            .Users.Where(u => u.UserName == username)
+            .Select(u => new UserProfileDTO
+            {
+                Username = username,
+                FollowingCount = u.Following.Count(),
+                FollowersCount = u.Followers.Count(),
+                Posts = u
+                    .Posts.Select(p => new PostDTO
+                    {
+                        Description = p.Description,
+                        CreatedDate = p.CreatedDate
+                    })
+                    .ToList()
+            })
+            .FirstOrDefaultAsync();
+
+        if (userProfile == null)
+            return controller.NotFound();
+
+        return userProfile;
     }
 }
