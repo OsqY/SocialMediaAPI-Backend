@@ -132,6 +132,7 @@ public class UserController : ControllerBase
                     );
 
                     var jwtString = new JwtSecurityTokenHandler().WriteToken(jwtObject);
+                    Console.WriteLine(jwtString);
                     return StatusCode(StatusCodes.Status200OK, jwtString);
                 }
             }

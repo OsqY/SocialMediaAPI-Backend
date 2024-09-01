@@ -17,7 +17,7 @@ public class PostHub : Hub
         _context = context;
     }
 
-    public async Task AddPost(PostDTO postDTO)
+    public async Task AddPost(string postDescription)
     {
         try
         {
@@ -39,21 +39,117 @@ public class PostHub : Hub
 
             Post? post = new Post
             {
-                Description = postDTO.Description,
+                Description = postDescription,
                 CreatedDate = DateTime.Now,
                 LastModifiedDate = DateTime.Now,
                 UserId = user.Id
             };
 
+            PostDTO postData = new PostDTO
+            {
+                Description = postDescription,
+                CreatedDate = post.CreatedDate,
+            };
+
             await _context.Posts.AddAsync(post);
             await _context.SaveChangesAsync();
 
-            await Clients.All.SendAsync("Post added.", post);
+            await Clients.All.SendAsync("NewPost", postData);
         }
         catch (Exception e)
         {
             Console.Error.WriteLine($"Error in AddPost: {e.Message}");
             await Clients.Caller.SendAsync("Error", "An error occurred while adding your post.");
+        }
+    }
+
+    public async Task LikeOrUnlikePost(int postId, bool isLikingPost)
+    {
+        try
+        {
+            var post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == postId);
+
+            if (post == null)
+            {
+                await Clients.Caller.SendAsync("Error", "That post doesn't exists.");
+                return;
+            }
+
+            var username = GetUsername();
+
+            if (string.IsNullOrEmpty(username))
+            {
+                await Clients.Caller.SendAsync("Error", "User not authenticated.");
+                return;
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
+
+            if (user == null)
+            {
+                await Clients.Caller.SendAsync("Error", "User not found.");
+                return;
+            }
+
+            if (isLikingPost)
+                post.LikedByUsers.Add(user);
+            else
+                post.LikedByUsers.Remove(user);
+
+            string message = isLikingPost ? $"Post liked by {username}." : "";
+            await Clients.All.SendAsync("PostLiked", message);
+        }
+        catch (Exception e)
+        {
+            Console.Error.WriteLine($"Error in LikePost: {e.Message}");
+            await Clients.Caller.SendAsync("Error", "An error occurred while liking your post.");
+        }
+    }
+
+    public async Task CommentOnPost(int postId, string commentContent)
+    {
+        try
+        {
+            var post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == postId);
+
+            if (post == null)
+            {
+                await Clients.Caller.SendAsync("Error", "That post doesn't exists.");
+                return;
+            }
+
+            var username = GetUsername();
+
+            if (string.IsNullOrEmpty(username))
+            {
+                await Clients.Caller.SendAsync("Error", "User not authenticated.");
+                return;
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
+
+            if (user == null)
+            {
+                await Clients.Caller.SendAsync("Error", "User not found.");
+                return;
+            }
+
+            Comment comment = new Comment
+            {
+                UserId = user.Id,
+                PostId = post.Id,
+                CreatedDate = DateTime.Now,
+                Content = commentContent
+            };
+
+            post.Comments.Add(comment);
+
+            await Clients.All.SendAsync("PostCommented", commentContent);
+        }
+        catch (Exception e)
+        {
+            Console.Error.WriteLine($"Error in LikePost: {e.Message}");
+            await Clients.Caller.SendAsync("Error", "An error occurred while liking your post.");
         }
     }
 

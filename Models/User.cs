@@ -10,5 +10,6 @@ namespace SocialMediaAPI.Models
         public ICollection<ApiUser>? Following { get; set; }
         public ICollection<ChatMessage>? SentMessages { get; set; }
         public ICollection<ChatMessage>? ReceivedMessages { get; set; }
+        public ICollection<Comment>? Comments { get; set; }
     }
 }

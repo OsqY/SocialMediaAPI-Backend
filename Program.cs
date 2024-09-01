@@ -21,9 +21,10 @@ builder.Services.AddCors(opts =>
 {
     opts.AddDefaultPolicy(cfg =>
     {
-        cfg.WithOrigins(builder.Configuration["AllowedOrigins"]!);
+        cfg.WithOrigins(builder.Configuration["AllowedOrigins"].Split(",")!);
         cfg.AllowAnyHeader();
         cfg.AllowAnyMethod();
+        cfg.AllowCredentials();
     });
     opts.AddPolicy(
         name: "AnyOrigin",
@@ -35,6 +36,7 @@ builder.Services.AddCors(opts =>
         }
     );
 });
+
 builder
     .Services.AddControllers(opts =>
     {
@@ -131,7 +133,10 @@ builder
                 var accessToken = context.Request.Query["access_token"];
 
                 var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hub"))
+                if (
+                    !string.IsNullOrEmpty(accessToken)
+                    && (path.StartsWithSegments("/postHub") || path.StartsWithSegments("/chatHub"))
+                )
                     context.Token = accessToken;
                 return Task.CompletedTask;
             }
@@ -158,7 +163,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("AnyOrigin");
+app.UseCors();
 app.UseHttpsRedirection();
 
 app.UseAuthentication();

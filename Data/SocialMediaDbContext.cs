@@ -38,6 +38,13 @@ namespace SocialMediaAPI.Data
                 .HasForeignKey(m => m.SenderId)
                 .IsRequired();
 
+            modelBuilder
+                .Entity<ApiUser>()
+                .HasMany(u => u.Comments)
+                .WithOne(c => c.User)
+                .HasForeignKey(c => c.UserId)
+                .IsRequired();
+
             base.OnModelCreating(modelBuilder);
         }
 

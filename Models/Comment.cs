@@ -11,6 +11,10 @@ namespace SocialMediaAPI.Models
         public int Id { get; set; }
 
         [Required]
+        public string UserId { get; set; }
+        public ApiUser? User { get; set; }
+
+        [Required]
         public int PostId { get; set; }
         public Post? Post { get; set; }
 
