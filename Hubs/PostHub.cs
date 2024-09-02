@@ -54,7 +54,7 @@ public class PostHub : Hub
             await _context.Posts.AddAsync(post);
             await _context.SaveChangesAsync();
 
-            await Clients.All.SendAsync("NewPost", postData);
+            await Clients.Others.SendAsync("NewPost", postData);
         }
         catch (Exception e)
         {
@@ -97,7 +97,7 @@ public class PostHub : Hub
                 post.LikedByUsers.Remove(user);
 
             string message = isLikingPost ? $"Post liked by {username}." : "";
-            await Clients.All.SendAsync("PostLiked", message);
+            await Clients.Others.SendAsync("PostLiked", message);
         }
         catch (Exception e)
         {
@@ -144,7 +144,7 @@ public class PostHub : Hub
 
             post.Comments.Add(comment);
 
-            await Clients.All.SendAsync("PostCommented", commentContent);
+            await Clients.Others.SendAsync("PostCommented", $"{username} commented on your post.");
         }
         catch (Exception e)
         {

@@ -235,28 +235,6 @@ public class UserController : ControllerBase
 
             UserProfileDTO user = result.Value!;
 
-            var ownUsername = User
-                ?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name")
-                ?.Value;
-
-            if (ownUsername != null)
-            {
-                var ownUserResult = await _userUtils.GetUserProfileInfo(
-                    _context,
-                    ownUsername,
-                    this
-                );
-
-                if (ownUserResult.Result != null)
-                    return ownUserResult.Result;
-
-                var ownUser = ownUserResult.Value;
-
-                if (ownUser != null && ownUser.Username == username)
-                {
-                    user.IsOwnUserProfile = true;
-                }
-            }
             return Ok(user);
         }
         catch (Exception e)
@@ -274,35 +252,68 @@ public class UserController : ControllerBase
         }
     }
 
-    // [HttpGet]
-    // [Authorize]
-    // [ProducesResponseType(typeof(string), 200)]
-    // [ProducesResponseType(typeof(ProblemDetails), 401)]
-    // [ProducesResponseType(typeof(ProblemDetails), 500)]
-    // public async Task<ActionResult> GetUserProfile()
-    // {
-    //     try
-    //     {
-    //         var result = await _userUtils.GetuUserProfileInfo(_context, User, this);
-    //
-    //         if (result.Result != null)
-    //             return result.Result;
-    //
-    //         UserProfileDTO user = result.Value;
-    //         return Ok(user);
-    //     }
-    //     catch (Exception e)
-    //     {
-    //         return StatusCode(
-    //             StatusCodes.Status500InternalServerError,
-    //             new ProblemDetails
-    //             {
-    //                 Status = StatusCodes.Status500InternalServerError,
-    //                 Title = "Internal server error: " + e.Message,
-    //                 Detail = "An error occurred during the userprofile retrieving process.",
-    //                 Instance = HttpContext.Request.Path
-    //             }
-    //         );
-    //     }
-    // }
+    [HttpGet()]
+    [Authorize]
+    [ProducesResponseType(typeof(string), 200)]
+    [ProducesResponseType(typeof(ProblemDetails), 401)]
+    [ProducesResponseType(typeof(ProblemDetails), 404)]
+    [ProducesResponseType(typeof(ProblemDetails), 500)]
+    public async Task<ActionResult> GetUserProfile()
+    {
+        try
+        {
+            var ownUsername = User
+                ?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name")
+                ?.Value;
+
+            ActionResult<UserProfileDTO> result;
+            result = await _userUtils.GetUserProfileInfo(_context, ownUsername, this);
+
+            if (result.Result != null)
+                return result.Result;
+
+            UserProfileDTO user = result.Value;
+            user.IsOwnUserProfile = true;
+            return Ok(user);
+        }
+        catch (Exception e)
+        {
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new ProblemDetails
+                {
+                    Status = StatusCodes.Status500InternalServerError,
+                    Title = "Internal server error: " + e.Message,
+                    Detail = "An error occurred during the userprofile retrieving process.",
+                    Instance = HttpContext.Request.Path
+                }
+            );
+        }
+    }
+
+    [HttpGet("{username}")]
+    [Authorize]
+    public async Task<ActionResult> CheckIfUserIsFollowing(string username)
+    {
+        var ownUsername = User
+            ?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name")
+            ?.Value;
+
+        if (string.IsNullOrEmpty(ownUsername))
+            return Unauthorized(new { Message = "User making the request not authenticated." });
+
+        var user = await _context
+            .Users.Include(u => u.Following)
+            .FirstOrDefaultAsync(u => u.UserName == ownUsername);
+
+        if (user == null)
+            return Unauthorized(new { Message = "User making the request not authenticated." });
+
+        var isFollowing = user.Following.Any(u => u.UserName == username);
+
+        if (isFollowing)
+            return Ok("Unfollow");
+        else
+            return Ok("Follow");
+    }
 }

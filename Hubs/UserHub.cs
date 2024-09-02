@@ -15,7 +15,7 @@ public class UserHub : Hub
         _context = context;
     }
 
-    public async Task FollowUser(string usernameToFollow)
+    public async Task FollowOrUnfollowUser(string usernameToFollow, bool isFollowing)
     {
         try
         {
@@ -50,13 +50,19 @@ public class UserHub : Hub
                 return;
             }
 
-            userToFollow.Followers.Add(user);
+            if (isFollowing)
+                userToFollow.Followers.Add(user);
+            else
+            {
+                userToFollow.Followers.Remove(user);
+            }
 
-            await Clients.All.SendAsync("NewFollower", $"{user.UserName} is following you.");
+            string message = (isFollowing) ? $"{user.UserName} is following you." : "";
+            await Clients.Others.SendAsync("NewFollower", message);
         }
         catch (Exception e)
         {
-            Console.Error.WriteLine($"Error in LikePost: {e.Message}");
+            Console.Error.WriteLine($"Error in Following/Unfollowing user: {e.Message}");
             await Clients.Caller.SendAsync("Error", "An error occurred while following an user.");
         }
     }

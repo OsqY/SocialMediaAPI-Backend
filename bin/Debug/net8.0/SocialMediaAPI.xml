@@ -52,5 +52,17 @@
         <member name="M:SocialMediaAPI.Migrations.UserCommentRelationship.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
             <inheritdoc />
         </member>
+        <member name="T:SocialMediaAPI.Migrations.ChangedFolloersRelationship">
+            <inheritdoc />
+        </member>
+        <member name="M:SocialMediaAPI.Migrations.ChangedFolloersRelationship.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:SocialMediaAPI.Migrations.ChangedFolloersRelationship.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:SocialMediaAPI.Migrations.ChangedFolloersRelationship.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
     </members>
 </doc>

@@ -45,6 +45,28 @@ namespace SocialMediaAPI.Data
                 .HasForeignKey(c => c.UserId)
                 .IsRequired();
 
+            modelBuilder
+                .Entity<ApiUser>()
+                .HasMany(u => u.Followers)
+                .WithMany(u => u.Following)
+                .UsingEntity<Dictionary<string, ApiUser>>(
+                    "UserFollowers",
+                    j =>
+                        j.HasOne<ApiUser>()
+                            .WithMany()
+                            .HasForeignKey("FollowerId")
+                            .OnDelete(DeleteBehavior.Restrict),
+                    j =>
+                        j.HasOne<ApiUser>()
+                            .WithMany()
+                            .HasForeignKey("FollowingId")
+                            .OnDelete(DeleteBehavior.Restrict),
+                    j =>
+                    {
+                        j.HasKey("FollowerId", "FollowingId");
+                        j.ToTable("UserFollowers");
+                    }
+                );
             base.OnModelCreating(modelBuilder);
         }
 

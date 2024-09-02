@@ -135,7 +135,11 @@ builder
                 var path = context.HttpContext.Request.Path;
                 if (
                     !string.IsNullOrEmpty(accessToken)
-                    && (path.StartsWithSegments("/postHub") || path.StartsWithSegments("/chatHub"))
+                    && (
+                        path.StartsWithSegments("/postHub")
+                        || path.StartsWithSegments("/chatHub")
+                        || path.StartsWithSegments("/userHub")
+                    )
                 )
                     context.Token = accessToken;
                 return Task.CompletedTask;
