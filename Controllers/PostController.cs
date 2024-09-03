@@ -89,7 +89,7 @@ public class PostController : ControllerBase
                 {
                     Description = post.Description,
                     CreatedDate = post.CreatedDate,
-                    UserId = post.UserId
+                    Username = user.UserName
                 },
                 Links = new List<LinkDTO>()
                 {

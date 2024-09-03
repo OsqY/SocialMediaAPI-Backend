@@ -4,6 +4,17 @@ namespace SocialMediaAPI.Models
 {
     public class ApiUser : IdentityUser
     {
+        public ApiUser()
+        {
+            Posts = new List<Post>();
+            LikedPosts = new List<Post>();
+            Followers = new List<ApiUser>();
+            Following = new List<ApiUser>();
+            SentMessages = new List<ChatMessage>();
+            ReceivedMessages = new List<ChatMessage>();
+            Comments = new List<Comment>();
+        }
+
         public ICollection<Post>? Posts { get; set; }
         public ICollection<Post>? LikedPosts { get; set; }
         public ICollection<ApiUser>? Followers { get; set; }

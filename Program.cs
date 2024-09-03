@@ -189,5 +189,6 @@ app.Use(
 app.MapControllers();
 app.MapHub<PostHub>("/postHub");
 app.MapHub<ChatHub>("/chatHub");
+app.MapHub<UserHub>("/userHub");
 
 app.Run();

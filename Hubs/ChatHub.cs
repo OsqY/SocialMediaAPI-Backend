@@ -36,7 +36,7 @@ public class ChatHub : Hub
         }
     }
 
-    public async Task SendMessageToUser(string receiverId, string content)
+    public async Task SendMessageToUser(string receiverUsername, string content)
     {
         try
         {
@@ -47,7 +47,7 @@ public class ChatHub : Hub
                 return;
             }
 
-            var receiver = await _userManager.FindByIdAsync(receiverId);
+            var receiver = await _userManager.FindByNameAsync(receiverUsername);
             if (receiver == null)
             {
                 await Clients.Caller.SendAsync("Error", "Receiver not found.");

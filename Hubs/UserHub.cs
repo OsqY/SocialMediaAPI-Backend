@@ -15,7 +15,7 @@ public class UserHub : Hub
         _context = context;
     }
 
-    public async Task FollowOrUnfollowUser(string usernameToFollow, bool isFollowing)
+    public async Task FollowUser(string usernameToFollow)
     {
         try
         {
@@ -30,7 +30,7 @@ public class UserHub : Hub
             );
             if (userToFollow == null)
             {
-                await Clients.Caller.SendAsync("Error", "User to follow doesn't exists.");
+                await Clients.Caller.SendAsync("Error", "User to follow doesn't exist.");
                 return;
             }
 
@@ -43,27 +43,77 @@ public class UserHub : Hub
             }
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
-
             if (user == null)
             {
                 await Clients.Caller.SendAsync("Error", "User making the request not found.");
                 return;
             }
 
-            if (isFollowing)
-                userToFollow.Followers.Add(user);
-            else
+            if (!userToFollow.Followers.Any(f => f.Id == user.Id))
             {
-                userToFollow.Followers.Remove(user);
+                userToFollow.Followers.Add(user);
+                await _context.SaveChangesAsync();
+                await Clients
+                    .User(userToFollow.Id)
+                    .SendAsync("NewFollowerNotification", $"{user.UserName} is following you.");
             }
-
-            string message = (isFollowing) ? $"{user.UserName} is following you." : "";
-            await Clients.Others.SendAsync("NewFollower", message);
         }
         catch (Exception e)
         {
-            Console.Error.WriteLine($"Error in Following/Unfollowing user: {e.Message}");
-            await Clients.Caller.SendAsync("Error", "An error occurred while following an user.");
+            Console.Error.WriteLine($"Error in Following user: {e.Message}");
+            await Clients.Caller.SendAsync("Error", "An error occurred while following a user.");
+        }
+    }
+
+    public async Task UnfollowUser(string usernameToUnfollow)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(usernameToUnfollow))
+            {
+                await Clients.Caller.SendAsync("Error", "Username to unfollow is not valid.");
+                return;
+            }
+
+            var userToUnfollow = await _context
+                .Users.Include(u => u.Followers)
+                .FirstOrDefaultAsync(u => u.UserName == usernameToUnfollow);
+            if (userToUnfollow == null)
+            {
+                await Clients.Caller.SendAsync("Error", "User to unfollow doesn't exist.");
+                return;
+            }
+
+            var username = GetUsername();
+
+            if (string.IsNullOrEmpty(username))
+            {
+                await Clients.Caller.SendAsync("Error", "User is not authenticated.");
+                return;
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
+            if (user == null)
+            {
+                await Clients.Caller.SendAsync("Error", "User making the request not found.");
+                return;
+            }
+
+            var follower = userToUnfollow.Followers.FirstOrDefault(f => f.Id == user.Id);
+            if (follower != null)
+            {
+                Console.WriteLine("AAa");
+                userToUnfollow.Followers.Remove(follower);
+                await _context.SaveChangesAsync();
+                await Clients
+                    .User(userToUnfollow.Id)
+                    .SendAsync("NewFollowerNotification", $"{user.UserName} has unfollowed you.");
+            }
+        }
+        catch (Exception e)
+        {
+            Console.Error.WriteLine($"Error in Unfollowing user: {e.Message}");
+            await Clients.Caller.SendAsync("Error", "An error occurred while unfollowing a user.");
         }
     }
 

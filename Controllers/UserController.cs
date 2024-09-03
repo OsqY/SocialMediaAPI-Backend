@@ -300,7 +300,7 @@ public class UserController : ControllerBase
             ?.Value;
 
         if (string.IsNullOrEmpty(ownUsername))
-            return Unauthorized(new { Message = "User making the request not authenticated." });
+            return Unauthorized(new { Message = "Username not in claims." });
 
         var user = await _context
             .Users.Include(u => u.Following)
