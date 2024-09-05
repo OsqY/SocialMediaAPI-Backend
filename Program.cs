@@ -100,7 +100,8 @@ builder
         opts.Password.RequireNonAlphanumeric = true;
         opts.Password.RequiredLength = 12;
     })
-    .AddEntityFrameworkStores<SocialMediaDbContext>();
+    .AddEntityFrameworkStores<SocialMediaDbContext>()
+    .AddDefaultTokenProviders();
 
 builder
     .Services.AddAuthentication(opts =>

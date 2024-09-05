@@ -1,9 +1,8 @@
-using Microsoft.AspNet.SignalR.Messaging;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SocialMediaAPI.Data;
+using SocialMediaAPI.DTO;
 using SocialMediaAPI.Models;
 
 namespace SocialMediaAPI.Hubs;
@@ -12,27 +11,31 @@ namespace SocialMediaAPI.Hubs;
 public class ChatHub : Hub
 {
     private readonly SocialMediaDbContext _context;
-    private readonly UserManager<ApiUser> _userManager;
 
-    public ChatHub(SocialMediaDbContext context, UserManager<ApiUser> userManager)
+    public ChatHub(SocialMediaDbContext context)
     {
         _context = context;
-        _userManager = userManager;
-    }
-
-    public async Task JoinChatWithUser(string username)
-    {
-        await Groups.AddToGroupAsync(Context.ConnectionId, username);
     }
 
     public override async Task OnConnectedAsync()
     {
-        var user = await _userManager.GetUserAsync(Context.User);
+        var username = GetUsername();
 
-        if (user != null)
+        if (!string.IsNullOrEmpty(username))
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, user.Id);
+            await Groups.AddToGroupAsync(Context.ConnectionId, username);
             await base.OnConnectedAsync();
+        }
+    }
+
+    public async Task JoinChatWithUser(string username)
+    {
+        var currentUsername = GetUsername();
+
+        if (!string.IsNullOrEmpty(currentUsername))
+        {
+            var groupName = GetGroupName(currentUsername, username);
+            await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
         }
     }
 
@@ -40,17 +43,23 @@ public class ChatHub : Hub
     {
         try
         {
-            var sender = await _userManager.GetUserAsync(Context.User);
-            if (sender == null)
+            var senderUsername = GetUsername();
+            if (string.IsNullOrEmpty(senderUsername))
             {
                 await Clients.Caller.SendAsync("Error", "User not authenticated.");
                 return;
             }
 
-            var receiver = await _userManager.FindByNameAsync(receiverUsername);
-            if (receiver == null)
+            var sender = await _context.Users.FirstOrDefaultAsync(u =>
+                u.UserName == senderUsername
+            );
+            var receiver = await _context.Users.FirstOrDefaultAsync(u =>
+                u.UserName == receiverUsername
+            );
+
+            if (sender == null || receiver == null)
             {
-                await Clients.Caller.SendAsync("Error", "Receiver not found.");
+                await Clients.Caller.SendAsync("Error", "User not found.");
                 return;
             }
 
@@ -66,33 +75,16 @@ public class ChatHub : Hub
             _context.Messages.Add(message);
             await _context.SaveChangesAsync();
 
-            await Clients
-                .Group(sender.Id)
-                .SendAsync(
-                    "NewMessage",
-                    new
-                    {
-                        Id = message.Id,
-                        Content = message.Content,
-                        SenderId = message.SenderId,
-                        ReceiverId = message.ReceiverId,
-                        CreatedDate = message.CreatedDate
-                    }
-                );
+            var messageDto = new
+            {
+                Content = message.Content,
+                SenderName = sender.UserName,
+                ReceiverName = receiver.UserName,
+                CreatedDate = message.CreatedDate
+            };
 
-            await Clients
-                .Group(receiver.Id)
-                .SendAsync(
-                    "NewMessage",
-                    new
-                    {
-                        Id = message.Id,
-                        Content = message.Content,
-                        SenderId = message.SenderId,
-                        ReceiverId = message.ReceiverId,
-                        CreatedDate = message.CreatedDate
-                    }
-                );
+            var groupName = GetGroupName(senderUsername, receiverUsername);
+            await Clients.Group(groupName).SendAsync("NewMessage", messageDto);
         }
         catch (Exception ex)
         {
@@ -101,23 +93,37 @@ public class ChatHub : Hub
         }
     }
 
-    public async Task GetChatMessages(string userId)
+    public async Task GetChatMessages(string username)
     {
         try
         {
-            var currentUser = await _userManager.GetUserAsync(Context.User);
+            var currentUsername = GetUsername();
 
-            if (currentUser == null)
+            if (string.IsNullOrEmpty(currentUsername))
             {
                 await Clients.Caller.SendAsync("Error", "User not authenticated.");
                 return;
             }
 
-            var messages = _context
+            var currentUser = await _context.Users.FirstOrDefaultAsync(u =>
+                u.UserName == currentUsername
+            );
+            var otherUser = await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
+
+            if (currentUser == null || otherUser == null)
+            {
+                await Clients.Caller.SendAsync("Error", "User not found.");
+                return;
+            }
+
+            var messages = await _context
                 .Messages.Where(m =>
-                    (m.SenderId == currentUser.Id && m.ReceiverId == userId)
-                    || (m.SenderId == userId && m.ReceiverId == currentUser.Id)
+                    (m.SenderId == currentUser.Id && m.ReceiverId == otherUser.Id)
+                    || (m.SenderId == otherUser.Id && m.ReceiverId == currentUser.Id)
                 )
+                .Include(m => m.Sender)
+                .AsSplitQuery()
+                .Include(m => m.Receiver)
                 .OrderBy(m => m.CreatedDate)
                 .Select(m => new
                 {
@@ -138,6 +144,81 @@ public class ChatHub : Hub
                 "An error occurred while retrieving your messages."
             );
         }
+    }
+
+    public async Task RetrieveHistory()
+    {
+        try
+        {
+            var currentUsername = GetUsername();
+
+            if (string.IsNullOrEmpty(currentUsername))
+            {
+                await Clients.Caller.SendAsync("Error", "User not authenticated.");
+                return;
+            }
+
+            var currentUser = await _context
+                .Users.Include(u => u.ReceivedMessages)
+                .ThenInclude(m => m.Sender)
+                .Include(u => u.SentMessages)
+                .ThenInclude(m => m.Receiver)
+                .FirstOrDefaultAsync(u => u.UserName == currentUsername);
+
+            if (currentUser == null)
+            {
+                await Clients.Caller.SendAsync("Error", "User not found.");
+                return;
+            }
+
+            var sentMessages = currentUser.SentMessages.OrderBy(m => m.CreatedDate).ToList();
+            var receivedMessages = currentUser
+                .ReceivedMessages.OrderBy(m => m.CreatedDate)
+                .ToList();
+
+            var lastMessages = new List<LastMessageDTO>();
+
+            foreach (var sentMessage in sentMessages)
+            {
+                if (!lastMessages.Any(m => m.Username == sentMessage.Receiver.UserName))
+                {
+                    lastMessages.Add(
+                        new LastMessageDTO
+                        {
+                            Username = sentMessage.Receiver.UserName,
+                            LastMessage = sentMessage.Content
+                        }
+                    );
+                }
+            }
+
+            foreach (var receivedMessage in receivedMessages)
+            {
+                if (!lastMessages.Any(m => m.Username == receivedMessage.Sender.UserName))
+                {
+                    lastMessages.Add(
+                        new LastMessageDTO
+                        {
+                            Username = receivedMessage.Sender.UserName,
+                            LastMessage = receivedMessage.Content
+                        }
+                    );
+                }
+            }
+
+            await Clients.Caller.SendAsync("RetrieveHistory", lastMessages);
+        }
+        catch (Exception e)
+        {
+            Console.Error.WriteLine($"Error in RetrieveHistory: {e.Message}");
+            await Clients.Caller.SendAsync("Error", "An error occurred while retrieving history.");
+        }
+    }
+
+    private string GetGroupName(string user1, string user2)
+    {
+        var stringCompare = string.CompareOrdinal(user1, user2) < 0;
+        return stringCompare ? $"{user1}-{user2}" : $"{user2}-{user1}";
     }
 
     private string? GetUsername()
